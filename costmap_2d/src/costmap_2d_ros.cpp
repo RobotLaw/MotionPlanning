@@ -108,13 +108,13 @@ Costmap2DROS::Costmap2DROS(const std::string& name, tf2_ros::Buffer& tf) :
 
   // check if we want a rolling window version of the costmap
   bool rolling_window, track_unknown_space, always_send_full_costmap;
-  private_nh.param("rolling_window", rolling_window, false);
+  private_nh.param("rolling_window", rolling_window, false); // 是否使用动态窗口，默认为false，在静态的全局地图中，地图不会变化
   private_nh.param("track_unknown_space", track_unknown_space, false);
-  private_nh.param("always_send_full_costmap", always_send_full_costmap, false);
+  private_nh.param("always_send_full_costmap", always_send_full_costmap, false); // 是否发布全部代价地图，默认false，只会发布部分的代价地图，加载全图耗费计算资源
 
   layered_costmap_ = new LayeredCostmap(global_frame_, rolling_window, track_unknown_space);
 
-  if (!private_nh.hasParam("plugins"))
+  if (!private_nh.hasParam("plugins")) // 地图序列，每层一个。每个地图都是一个包含名称和类型字段的字典
   {
     loadOldParameters(private_nh);
   } else {

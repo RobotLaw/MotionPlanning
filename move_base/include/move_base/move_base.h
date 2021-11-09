@@ -179,28 +179,35 @@ namespace move_base {
 
       MoveBaseActionServer* as_;
 
-      boost::shared_ptr<nav_core::BaseLocalPlanner> tc_;
-      costmap_2d::Costmap2DROS* planner_costmap_ros_, *controller_costmap_ros_;
+      boost::shared_ptr<nav_core::BaseLocalPlanner> tc_; // 局部规划器(trajectory controller)
+      costmap_2d::Costmap2DROS* planner_costmap_ros_, *controller_costmap_ros_; // 全局规划器及局部规划器的代价地图对象
 
-      boost::shared_ptr<nav_core::BaseGlobalPlanner> planner_;
-      std::string robot_base_frame_, global_frame_;
+      boost::shared_ptr<nav_core::BaseGlobalPlanner> planner_; // 全局规划器
+      std::string robot_base_frame_, global_frame_; // global_costmap下的机器人坐标系，全局坐标系
 
       std::vector<boost::shared_ptr<nav_core::RecoveryBehavior> > recovery_behaviors_;
       std::vector<std::string> recovery_behavior_names_;
       unsigned int recovery_index_;
 
       geometry_msgs::PoseStamped global_pose_;
-      double planner_frequency_, controller_frequency_, inscribed_radius_, circumscribed_radius_;
-      double planner_patience_, controller_patience_;
-      int32_t max_planning_retries_;
+      double planner_frequency_; // 全局规划器的执行频率，如果为0则只有出现新的目标点或者局部规划器报告路径堵塞时，才会重新规划
+      double controller_frequency_; // 向底盘控制移动话题cmd_vel发送速度命令的频率,这个速度由base_local_planner计算
+      double inscribed_radius_; // 内切半径
+      double circumscribed_radius_; // 外切半径
+      double planner_patience_; // 进行全局规划的时间间隔，如果超时则认为规划失败; 在空间清理操作执行前,留给规划器多长时间来找出一条有效规划
+      double controller_patience_; // 等待控制速度的时间间隔，如果控制速度的发布超过设置时间，则认为局部路径规划失败
+      int32_t max_planning_retries_; // 在执行恢复行为之前允许计划重试的次数.默认为-1，表示全局规划失败后立即执行恢复模块
       uint32_t planning_retries_;
       double conservative_reset_dist_, clearing_radius_;
       ros::Publisher current_goal_pub_, vel_pub_, action_goal_pub_, recovery_status_pub_;
       ros::Subscriber goal_sub_;
       ros::ServiceServer make_plan_srv_, clear_costmaps_srv_;
-      bool shutdown_costmaps_, clearing_rotation_allowed_, recovery_behavior_enabled_;
+      bool shutdown_costmaps_; // 当move_base不活动时，是否关闭代价地图的加载
+      bool clearing_rotation_allowed_; // 是否允许旋转恢复行为
+      bool recovery_behavior_enabled_; // 是否使用恢复模块
       bool make_plan_clear_costmap_, make_plan_add_unreachable_goal_;
-      double oscillation_timeout_, oscillation_distance_;
+      double oscillation_timeout_; // 在执行恢复行为之前允许振荡的时间（秒）
+      double oscillation_distance_; //机器人必须移动多远（以米计）才能被视为不摆动。如果出现摆动则说明全局规划失败，那么将在超时后执行恢复模块。
 
       MoveBaseState state_;
       RecoveryTrigger recovery_trigger_;
@@ -211,7 +218,7 @@ namespace move_base {
       pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
       pluginlib::ClassLoader<nav_core::RecoveryBehavior> recovery_loader_;
 
-      //set up plan triple buffer
+      //set up plan triple buffer, 路径规划结果缓存
       std::vector<geometry_msgs::PoseStamped>* planner_plan_;
       std::vector<geometry_msgs::PoseStamped>* latest_plan_;
       std::vector<geometry_msgs::PoseStamped>* controller_plan_;
@@ -221,7 +228,7 @@ namespace move_base {
       boost::recursive_mutex planner_mutex_;
       boost::condition_variable_any planner_cond_;
       geometry_msgs::PoseStamped planner_goal_;
-      boost::thread* planner_thread_;
+      boost::thread* planner_thread_; // 路径规划线程
 
 
       boost::recursive_mutex configuration_mutex_;

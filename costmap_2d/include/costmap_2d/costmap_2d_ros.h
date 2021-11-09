@@ -228,8 +228,8 @@ public:
   void setUnpaddedRobotFootprintPolygon(const geometry_msgs::Polygon& footprint);
 
 protected:
-  LayeredCostmap* layered_costmap_;
-  std::string name_;
+  LayeredCostmap* layered_costmap_; // 图层管理器
+  std::string name_; // costmap对象名称
   tf2_ros::Buffer& tf_;  ///< @brief Used for transforming point clouds
   std::string global_frame_;  ///< @brief The global frame for the costmap
   std::string robot_base_frame_;  ///< @brief The frame_id of the robot base
@@ -250,12 +250,15 @@ private:
   void reconfigureCB(costmap_2d::Costmap2DConfig &config, uint32_t level);
   void movementCB(const ros::TimerEvent &event);
   void mapUpdateLoop(double frequency);
-  bool map_update_thread_shutdown_;
-  bool stop_updates_, initialized_, stopped_, robot_stopped_;
-  boost::thread* map_update_thread_;  ///< @brief A thread for updating the map
-  ros::Timer timer_;
-  ros::Time last_publish_;
-  ros::Duration publish_cycle;
+  bool map_update_thread_shutdown_; // 是否终止更新地图的线程
+  bool stop_updates_;   // 用于标记是否停止更新代价地图，与图层的工作状态无关
+  bool initialized_;    // 用于标记代价地图是否已经初始化，更新地图线程是否正常工作
+  bool stopped_;        // 用于标记是否关闭了各个图层
+  bool robot_stopped_;  // 机器人是否停止运动
+  boost::thread* map_update_thread_;  ///< @brief A thread for updating the map,用于更新代价地图的线程
+  ros::Timer timer_; // 用于判定机器人是否在移动的计时器
+  ros::Time last_publish_; // 上次发布costmap的时间
+  ros::Duration publish_cycle; // 发布代价地图的周期计数器
   pluginlib::ClassLoader<Layer> plugin_loader_;
   geometry_msgs::PoseStamped old_pose_;
   Costmap2DPublisher* publisher_;
@@ -267,7 +270,7 @@ private:
   ros::Publisher footprint_pub_;
   std::vector<geometry_msgs::Point> unpadded_footprint_;
   std::vector<geometry_msgs::Point> padded_footprint_;
-  float footprint_padding_;
+  float footprint_padding_; // 足迹填充
   costmap_2d::Costmap2DConfig old_config_;
 };
 // class Costmap2DROS

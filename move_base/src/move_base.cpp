@@ -173,7 +173,8 @@ namespace move_base {
 
     //we're all set up now so we can start the action server
     as_->start();
-
+    
+    // 动态参数服务器配置
     dsrv_ = new dynamic_reconfigure::Server<move_base::MoveBaseConfig>(ros::NodeHandle("~"));
     dynamic_reconfigure::Server<move_base::MoveBaseConfig>::CallbackType cb = boost::bind(&MoveBase::reconfigureCB, this, _1, _2);
     dsrv_->setCallback(cb);
