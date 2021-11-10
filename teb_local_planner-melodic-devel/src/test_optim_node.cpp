@@ -83,8 +83,11 @@ int main( int argc, char** argv )
   // load ros parameters from node handle
   config.loadRosParamFromNodeHandle(n);
  
+  // ros定时器会计划在某一速率下执行一次回调操作，在订阅或服务中的回调函数队列机制中使用
+  // ros::Timer ros::NodeHandle::createTimer(ros::Duration period, <callback>, bool oneshot = false)
+  // oneshot，表示是否只执行一次，如果已经执行过，还可以通过stop()、setPeriod(ros::Duration)和start()来规划再执行一次
   ros::Timer cycle_timer = n.createTimer(ros::Duration(0.025), CB_mainCycle);
-  ros::Timer publish_timer = n.createTimer(ros::Duration(0.1), CB_publishCycle);
+  ros::Timer publish_timer = n.createTimer(ros::Duration(0.1), CB_publishCycle); // 更新TEB算法结果显示以及障碍物和规划途经点
   
   // setup dynamic reconfigure
   dynamic_recfg = boost::make_shared< dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig> >(n);
