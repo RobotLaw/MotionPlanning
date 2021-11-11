@@ -69,7 +69,7 @@ class Obstacle
 public:
   
   /**
-    * @brief Default constructor of the abstract obstacle class
+    * @brief Default constructor of the abstract obstacle class，静态障碍物速度为0，dynamic_为true时可设置障碍物质心速度
     */
   Obstacle() : dynamic_(false), centroid_velocity_(Eigen::Vector2d::Zero())
   {
@@ -281,8 +281,8 @@ public:
 	
 protected:
 	   
-  bool dynamic_; //!< Store flag if obstacle is dynamic (resp. a moving obstacle)
-  Eigen::Vector2d centroid_velocity_; //!< Store the corresponding velocity (vx, vy) of the centroid (zero, if _dynamic is \c true)
+  bool dynamic_; //!< Store flag if obstacle is dynamic (resp. a moving obstacle),是否为动态障碍物
+  Eigen::Vector2d centroid_velocity_; //!< Store the corresponding velocity (vx, vy) of the centroid (zero, if _dynamic is \c true)，质心速度
   
 public:	
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

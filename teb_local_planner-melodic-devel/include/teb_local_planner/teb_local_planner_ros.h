@@ -399,7 +399,7 @@ private:
   tf2_ros::Buffer* tf_; //!< pointer to tf buffer
     
   // internal objects (memory management owned)
-  PlannerInterfacePtr planner_; //!< Instance of the underlying optimal planner class
+  PlannerInterfacePtr planner_; //!< Instance of the underlying optimal planner class,基类指针(智能指针)
   ObstContainer obstacles_; //!< Obstacle vector that should be considered during local trajectory optimization
   ViaPointContainer via_points_; //!< Container of via-points that should be considered during local trajectory optimization
   TebVisualizationPtr visualization_; //!< Instance of the visualization class (local/global plan, obstacles, ...)
@@ -439,7 +439,7 @@ private:
   
   std::string global_frame_; //!< The frame in which the controller will run
   std::string robot_base_frame_; //!< Used as the base frame id of the robot
-  std::string name_; //!< For use with the ros nodehandle
+  std::string name_; //!< For use with the ros nodehandle,move_base中base_local_planner参数，此时为teb_local_planner/TebLocalPlannerROS
     
   // flags
   bool initialized_; //!< Keeps track about the correct initialization of this class

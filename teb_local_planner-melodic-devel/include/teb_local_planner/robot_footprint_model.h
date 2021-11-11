@@ -105,7 +105,7 @@ public:
   
   /**
    * @brief Compute the inscribed radius of the footprint model
-   * @return inscribed radius
+   * @return inscribed radius 内切半径
    */
   virtual double getInscribedRadius() = 0;
 
@@ -116,7 +116,7 @@ public:
 };
 
 
-//! Abbrev. for shared obstacle pointers
+//! Abbrev. for shared obstacle pointers，基类指针
 typedef boost::shared_ptr<BaseRobotFootprintModel> RobotFootprintModelPtr;
 //! Abbrev. for shared obstacle const pointers
 typedef boost::shared_ptr<const BaseRobotFootprintModel> RobotFootprintModelConstPtr;
@@ -371,10 +371,10 @@ public:
 
 private:
     
-  double front_offset_;
-  double front_radius_;
-  double rear_offset_;
-  double rear_radius_;
+  double front_offset_; // 前圆中心(front_circle)沿机器人正x轴移动的距离
+  double front_radius_; // 前圆半径
+  double rear_offset_;  // 后圆中心(front_circle)沿机器人负x轴移动的距离
+  double rear_radius_;  // 后圆半径
   
 };
 

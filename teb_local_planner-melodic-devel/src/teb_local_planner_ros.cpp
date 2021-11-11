@@ -92,24 +92,24 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
   // check if the plugin is already initialized
   if(!initialized_)
   {	
-    name_ = name;
+    name_ = name; // teb_local_planner/TebLocalPlannerROS
     // create Node Handle with name of plugin (as used in move_base for loading)
     ros::NodeHandle nh("~/" + name);
 	        
     // get parameters of TebConfig via the nodehandle and override the default config
     cfg_.loadRosParamFromNodeHandle(nh);       
     
-    // reserve some memory for obstacles
+    // reserve some memory for obstacles，类型为std::vector<ObstaclePtr>
     obstacles_.reserve(500);
         
-    // create visualization instance	
+    // create visualization instance，在TebVisualization构造函数里,注册话题 global_plan, local_plan,teb_poses, teb_markers, teb_feedback
     visualization_ = TebVisualizationPtr(new TebVisualization(nh, cfg_)); 
         
-    // create robot footprint/contour model for optimization
-    RobotFootprintModelPtr robot_model = getRobotFootprintFromParamServer(nh);
+    // create robot footprint/contour model for optimization，五种类型: point,line,circular,two_circle,polygon
+    RobotFootprintModelPtr robot_model = getRobotFootprintFromParamServer(nh); // 获取足迹/轮廓模型
     
     // create the planner instance
-    if (cfg_.hcp.enable_homotopy_class_planning)
+    if (cfg_.hcp.enable_homotopy_class_planning) // 一次优化多个轨迹
     {
       planner_ = PlannerInterfacePtr(new HomotopyClassPlanner(cfg_, &obstacles_, robot_model, visualization_, &via_points_));
       ROS_INFO("Parallel planning in distinctive topologies enabled.");
@@ -121,15 +121,16 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     }
     
     // init other variables
-    tf_ = tf;
-    costmap_ros_ = costmap_ros;
+    tf_ = tf; // 在 move_base_node.cpp中最初定义
+    costmap_ros_ = costmap_ros; // 这个就是 controller_costmap_ros_ = new costmap_2d::Costmap2DROS("local_costmap", tf_);
     costmap_ = costmap_ros_->getCostmap(); // locking should be done in MoveBase.
     
+    // 创建 CostmapModel 共享指针
     costmap_model_ = boost::make_shared<base_local_planner::CostmapModel>(*costmap_);
 
-    global_frame_ = costmap_ros_->getGlobalFrameID();
+    global_frame_ = costmap_ros_->getGlobalFrameID(); // 就是return global_frame, 实际是 "map"
     cfg_.map_frame = global_frame_; // TODO
-    robot_base_frame_ = costmap_ros_->getBaseFrameID();
+    robot_base_frame_ = costmap_ros_->getBaseFrameID(); // 代价地图的local frame, 实际是 "base_footprint"
 
     //Initialize a costmap to polygon converter
     if (!cfg_.obstacles.costmap_converter_plugin.empty())
@@ -158,7 +159,7 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
   
     
     // Get footprint of the robot and minimum and maximum distance from the center of the robot to its footprint vertices.
-    footprint_spec_ = costmap_ros_->getRobotFootprint();
+    footprint_spec_ = costmap_ros_->getRobotFootprint(); // 类型是 vector<geometry_msgs::Point>
     costmap_2d::calculateMinAndMaxDistances(footprint_spec_, robot_inscribed_radius_, robot_circumscribed_radius);    
     
     // init the odom helper to receive the robot's velocity from odom messages
@@ -170,12 +171,14 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     dynamic_recfg_->setCallback(cb);
     
     // validate optimization footprint and costmap footprint
+    // 对于point类型，第1个参数是0，要求最好第1项+第3项 > 第2项
+    // 否则 Infeasible optimziation results might occur frequently
     validateFootprints(robot_model->getInscribedRadius(), robot_inscribed_radius_, cfg_.obstacles.min_obstacle_dist);
         
-    // setup callback for custom obstacles
+    // setup callback for custom obstacles, 话题 /move_base/TebLocalPlannerROS/obstacles
     custom_obst_sub_ = nh.subscribe("obstacles", 1, &TebLocalPlannerROS::customObstacleCB, this);
 
-    // setup callback for custom via-points
+    // setup callback for custom via-points，话题 /move_base/TebLocalPlannerROS/via_points
     via_points_sub_ = nh.subscribe("via_points", 1, &TebLocalPlannerROS::customViaPointsCB, this);
     
     // initialize failure detector
@@ -1042,7 +1045,7 @@ RobotFootprintModelPtr TebLocalPlannerROS::getRobotFootprintFromParamServer(cons
   }
     
   // point  
-  if (model_name.compare("point") == 0)
+  if (model_name.compare("point") == 0) // 判断两个字符串是否相等，相等为0，不相等为-1
   {
     ROS_INFO("Footprint model 'point' loaded for trajectory optimization.");
     return boost::make_shared<PointRobotFootprint>();
