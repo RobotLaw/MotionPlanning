@@ -197,7 +197,7 @@ namespace move_base {
       double planner_patience_; // 进行全局规划的时间间隔，如果超时则认为规划失败; 在空间清理操作执行前,留给规划器多长时间来找出一条有效规划
       double controller_patience_; // 等待控制速度的时间间隔，如果控制速度的发布超过设置时间，则认为局部路径规划失败
       int32_t max_planning_retries_; // 在执行恢复行为之前允许计划重试的次数.默认为-1，表示全局规划失败后立即执行恢复模块
-      uint32_t planning_retries_;
+      uint32_t planning_retries_; // 重新尝试进行全局路径规划的次数
       double conservative_reset_dist_, clearing_radius_;
       ros::Publisher current_goal_pub_, vel_pub_, action_goal_pub_, recovery_status_pub_;
       ros::Subscriber goal_sub_;
@@ -212,22 +212,24 @@ namespace move_base {
       MoveBaseState state_;
       RecoveryTrigger recovery_trigger_;
 
-      ros::Time last_valid_plan_, last_valid_control_, last_oscillation_reset_;
+      ros::Time last_valid_plan_;         // 上一次有效规划的时间
+      ros::Time last_valid_control_;      // 上一次有效控制的时间
+      ros::Time last_oscillation_reset_;  // 上一次振荡重置的时间
       geometry_msgs::PoseStamped oscillation_pose_;
       pluginlib::ClassLoader<nav_core::BaseGlobalPlanner> bgp_loader_;
       pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
       pluginlib::ClassLoader<nav_core::RecoveryBehavior> recovery_loader_;
 
       //set up plan triple buffer, 路径规划结果缓存
-      std::vector<geometry_msgs::PoseStamped>* planner_plan_;
-      std::vector<geometry_msgs::PoseStamped>* latest_plan_;
+      std::vector<geometry_msgs::PoseStamped>* planner_plan_; // 全局规划器规划的路径
+      std::vector<geometry_msgs::PoseStamped>* latest_plan_;  // 全局规划器最新规划出来的全局路径
       std::vector<geometry_msgs::PoseStamped>* controller_plan_;
 
       //set up the planner's thread
-      bool runPlanner_;
+      bool runPlanner_; // 是否运行全局规划线程
       boost::recursive_mutex planner_mutex_;
-      boost::condition_variable_any planner_cond_;
-      geometry_msgs::PoseStamped planner_goal_;
+      boost::condition_variable_any planner_cond_; // 全局规划线程
+      geometry_msgs::PoseStamped planner_goal_; // 目标地点
       boost::thread* planner_thread_; // 路径规划线程
 
 
@@ -238,8 +240,10 @@ namespace move_base {
 
       move_base::MoveBaseConfig last_config_;
       move_base::MoveBaseConfig default_config_;
-      bool setup_, p_freq_change_, c_freq_change_;
-      bool new_global_plan_;
+      bool setup_;
+      bool p_freq_change_;
+      bool c_freq_change_; // 动态参数配置时控制频率发生了变化
+      bool new_global_plan_; // 新规划出来的全局路径
   };
 };
 #endif

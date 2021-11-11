@@ -484,7 +484,7 @@ namespace move_base {
       return false;
     }
 
-    //get the starting pose of the robot
+    //get the starting pose of the robot，获取机器人初始位姿
     geometry_msgs::PoseStamped global_pose;
     if(!getRobotPose(global_pose, planner_costmap_ros_)) {
       ROS_WARN("Unable to get starting pose of robot, unable to create global plan");
@@ -494,6 +494,7 @@ namespace move_base {
     const geometry_msgs::PoseStamped& start = global_pose;
 
     //if the planner fails or returns a zero length plan, planning failed
+    // 调用全局规划器规划全局路径
     if(!planner_->makePlan(start, goal, plan) || plan.empty()){
       ROS_DEBUG_NAMED("move_base","Failed to find a  plan to point (%.2f, %.2f)", goal.pose.position.x, goal.pose.position.y);
       return false;
@@ -578,7 +579,7 @@ namespace move_base {
       while(wait_for_wake || !runPlanner_){
         //if we should not be running the planner then suspend this thread
         ROS_DEBUG_NAMED("move_base_plan_thread","Planner thread is suspending");
-        planner_cond_.wait(lock);
+        planner_cond_.wait(lock); // 阻塞，等待move_base调用全局规划器
         wait_for_wake = false;
       }
       ros::Time start_time = ros::Time::now();
@@ -592,13 +593,13 @@ namespace move_base {
       planner_plan_->clear();
       bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_);
 
-      if(gotPlan){
+      if(gotPlan){ // 已经规划出来了一条全局路径
         ROS_DEBUG_NAMED("move_base_plan_thread","Got Plan with %zu points!", planner_plan_->size());
         //pointer swap the plans under mutex (the controller will pull from latest_plan_)
         std::vector<geometry_msgs::PoseStamped>* temp_plan = planner_plan_;
 
         lock.lock();
-        planner_plan_ = latest_plan_;
+        planner_plan_ = latest_plan_; // 值交换
         latest_plan_ = temp_plan;
         last_valid_plan_ = ros::Time::now();
         planning_retries_ = 0;
@@ -609,7 +610,7 @@ namespace move_base {
         //make sure we only start the controller if we still haven't reached the goal
         if(runPlanner_)
           state_ = CONTROLLING;
-        if(planner_frequency_ <= 0)
+        if(planner_frequency_ <= 0) // 小于等于0 ，则只规划一次，然后继续阻塞等待唤醒信号
           runPlanner_ = false;
         lock.unlock();
       }
@@ -638,7 +639,7 @@ namespace move_base {
       //take the mutex for the next iteration
       lock.lock();
 
-      //setup sleep interface if needed
+      //setup sleep interface if needed，按照一定的频率进行全局规划(这很耗费资源...)
       if(planner_frequency_ > 0){
         ros::Duration sleep_time = (start_time + ros::Duration(1.0/planner_frequency_)) - ros::Time::now();
         if (sleep_time > ros::Duration(0.0)){
@@ -656,6 +657,7 @@ namespace move_base {
       return;
     }
 
+    // 将目标点转换为世界坐标
     geometry_msgs::PoseStamped goal = goalToGlobalFrame(move_base_goal->target_pose);
 
     publishZeroVelocity();
@@ -663,10 +665,10 @@ namespace move_base {
     boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
     planner_goal_ = goal;
     runPlanner_ = true;
-    planner_cond_.notify_one();
+    planner_cond_.notify_one(); // 唤醒全局规划线程，此时该线程会阻塞，直到全局规划完毕再进行下一步
     lock.unlock();
 
-    current_goal_pub_.publish(goal);
+    current_goal_pub_.publish(goal); // 发布当前目标点
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
     ros::Rate r(controller_frequency_);
@@ -685,15 +687,15 @@ namespace move_base {
     ros::NodeHandle n;
     while(n.ok())
     {
-      if(c_freq_change_)
+      if(c_freq_change_) // 动态参数配置时控制频率发生了变化
       {
         ROS_INFO("Setting controller frequency to %.2f", controller_frequency_);
         r = ros::Rate(controller_frequency_);
         c_freq_change_ = false;
       }
 
-      if(as_->isPreemptRequested()){
-        if(as_->isNewGoalAvailable()){
+      if(as_->isPreemptRequested()){ // 检查是否发生中断
+        if(as_->isNewGoalAvailable()){ // 新的goal是否可用
           //if we're active and a new goal is available, we'll accept it, but we won't shut anything down
           move_base_msgs::MoveBaseGoal new_goal = *as_->acceptNewGoal();
 
