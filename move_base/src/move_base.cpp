@@ -694,7 +694,7 @@ namespace move_base {
         c_freq_change_ = false;
       }
 
-      if(as_->isPreemptRequested()){ // 检查是否发生中断
+      if(as_->isPreemptRequested()){ // 检查是否发生中断，这是因为有新的目标点发了过来导致中断了，则需要重新进行全局规划
         if(as_->isNewGoalAvailable()){ // 新的goal是否可用
           //if we're active and a new goal is available, we'll accept it, but we won't shut anything down
           move_base_msgs::MoveBaseGoal new_goal = *as_->acceptNewGoal();
@@ -847,11 +847,12 @@ namespace move_base {
       std::vector<geometry_msgs::PoseStamped>* temp_plan = controller_plan_;
 
       boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
-      controller_plan_ = latest_plan_;
+      controller_plan_ = latest_plan_; // 全局规划器最新规划出来的全局路径
       latest_plan_ = temp_plan;
       lock.unlock();
       ROS_DEBUG_NAMED("move_base","pointers swapped!");
 
+      // 设置局部规划器要跟随的全局路径
       if(!tc_->setPlan(*controller_plan_)){
         //ABORT and SHUTDOWN COSTMAPS
         ROS_ERROR("Failed to pass global plan to the controller, aborting.");
@@ -910,7 +911,7 @@ namespace move_base {
           recovery_trigger_ = OSCILLATION_R;
         }
 
-        {
+        { // 加锁
          boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(controller_costmap_ros_->getCostmap()->getMutex()));
 
         if(tc_->computeVelocityCommands(cmd_vel)){
@@ -927,7 +928,7 @@ namespace move_base {
           ros::Time attempt_end = last_valid_control_ + ros::Duration(controller_patience_);
 
           //check if we've tried to find a valid control for longer than our time limit
-          if(ros::Time::now() > attempt_end){
+          if(ros::Time::now() > attempt_end){ // 控制速度的发布超过设置时间，则认为局部路径规划失败
             //we'll move into our obstacle clearing mode
             publishZeroVelocity();
             state_ = CLEARING;

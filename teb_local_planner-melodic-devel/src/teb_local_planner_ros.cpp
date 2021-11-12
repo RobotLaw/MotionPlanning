@@ -230,7 +230,7 @@ bool TebLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   geometry_msgs::TwistStamped dummy_velocity, cmd_vel_stamped;
   uint32_t outcome = computeVelocityCommands(dummy_pose, dummy_velocity, cmd_vel_stamped, dummy_message);
   cmd_vel = cmd_vel_stamped.twist;
-  return outcome == mbf_msgs::ExePathResult::SUCCESS;
+  return outcome == mbf_msgs::ExePathResult::SUCCESS; // 0
 }
 
 uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseStamped& pose,
@@ -243,7 +243,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   {
     ROS_ERROR("teb_local_planner has not been initialized, please call initialize() before using this planner");
     message = "teb_local_planner has not been initialized";
-    return mbf_msgs::ExePathResult::NOT_INITIALIZED;
+    return mbf_msgs::ExePathResult::NOT_INITIALIZED; // 112
   }
 
   static uint32_t seq = 0;
@@ -263,9 +263,9 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   odom_helper_.getRobotVel(robot_vel_tf);
   robot_vel_.linear.x = robot_vel_tf.pose.position.x;
   robot_vel_.linear.y = robot_vel_tf.pose.position.y;
-  robot_vel_.angular.z = tf2::getYaw(robot_vel_tf.pose.orientation);
+  robot_vel_.angular.z = tf2::getYaw(robot_vel_tf.pose.orientation); // 角速度
   
-  // prune global plan to cut off parts of the past (spatially before the robot)
+  // prune global plan to cut off parts of the past (spatially before the robot)，剪枝
   pruneGlobalPlan(*tf_, robot_pose, global_plan_, cfg_.trajectory.global_plan_prune_distance);
 
   // Transform global plan to the frame of interest (w.r.t. the local costmap)

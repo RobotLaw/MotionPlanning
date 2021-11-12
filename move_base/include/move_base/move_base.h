@@ -215,7 +215,7 @@ namespace move_base {
       ros::Time last_valid_plan_;         // 上一次有效规划的时间
       ros::Time last_valid_control_;      // 上一次有效控制的时间
       ros::Time last_oscillation_reset_;  // 上一次振荡重置的时间
-      geometry_msgs::PoseStamped oscillation_pose_;
+      geometry_msgs::PoseStamped oscillation_pose_; // 振荡位姿
       pluginlib::ClassLoader<nav_core::BaseGlobalPlanner> bgp_loader_;
       pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
       pluginlib::ClassLoader<nav_core::RecoveryBehavior> recovery_loader_;
@@ -243,7 +243,7 @@ namespace move_base {
       bool setup_;
       bool p_freq_change_;
       bool c_freq_change_; // 动态参数配置时控制频率发生了变化
-      bool new_global_plan_; // 新规划出来的全局路径
+      bool new_global_plan_; // 新规划出来了全局路径
   };
 };
 #endif

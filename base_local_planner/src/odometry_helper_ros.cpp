@@ -68,11 +68,11 @@ void OdometryHelperRos::getOdom(nav_msgs::Odometry& base_odom) {
 void OdometryHelperRos::getRobotVel(geometry_msgs::PoseStamped& robot_vel) {
   // Set current velocities from odometry
   geometry_msgs::Twist global_vel;
-  {
+  { // 加锁
     boost::mutex::scoped_lock lock(odom_mutex_);
     global_vel.linear.x = base_odom_.twist.twist.linear.x;
     global_vel.linear.y = base_odom_.twist.twist.linear.y;
-    global_vel.angular.z = base_odom_.twist.twist.angular.z;
+    global_vel.angular.z = base_odom_.twist.twist.angular.z; // 角速度
 
     robot_vel.header.frame_id = base_odom_.child_frame_id;
   }
