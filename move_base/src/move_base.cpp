@@ -650,8 +650,10 @@ namespace move_base {
     }
   }
 
+  // 每当接收到一个Action目标(goal)的时候，都会调用该函数,可看作是整个move_base系统的业务逻辑入口
   void MoveBase::executeCb(const move_base_msgs::MoveBaseGoalConstPtr& move_base_goal)
   {
+    // 首先检查目标点的位姿是否合法
     if(!isQuaternionValid(move_base_goal->target_pose.pose.orientation)){
       as_->setAborted(move_base_msgs::MoveBaseResult(), "Aborting on goal because it was sent with an invalid quaternion");
       return;
@@ -694,6 +696,8 @@ namespace move_base {
         c_freq_change_ = false;
       }
 
+      // 查看Action服务器的状态机。如果触发了抢占，需要相应作出处理，并更新as_的状态机。如果是因为接收到新的目标而触发了抢占行为，
+      // 我们将接受新目标并开始新的规划和控制。对于其它抢占行为，我们认为取消了Action任务，将挂起退出
       if(as_->isPreemptRequested()){ // 检查是否发生中断，这是因为有新的目标点发了过来导致中断了，则需要重新进行全局规划
         if(as_->isNewGoalAvailable()){ // 新的goal是否可用
           //if we're active and a new goal is available, we'll accept it, but we won't shut anything down
@@ -741,6 +745,7 @@ namespace move_base {
       }
 
       //we also want to check if we've changed global frames because we need to transform our goal pose
+      // MoveBase的框架还允许我们在控制过程中更新地图和全局坐标系，下面的代码片段检查到全局坐标系发生改变之后，重新计算目标点在新坐标系下的位姿，并重置规划状态
       if(goal.header.frame_id != planner_costmap_ros_->getGlobalFrameID()){
         goal = goalToGlobalFrame(goal);
 
@@ -769,7 +774,7 @@ namespace move_base {
       //for timing that gives real time even in simulation
       ros::WallTime start = ros::WallTime::now();
 
-      //the real work on pursuing a goal is done here
+      //the real work on pursuing a goal is done here,开始执行真正的导航控制业务executeCycle
       bool done = executeCycle(goal, global_plan);
 
       //if we're done, then we'll return from execute
@@ -785,8 +790,9 @@ namespace move_base {
       //make sure to sleep for the remainder of our cycle time
       if(r.cycleTime() > ros::Duration(1 / controller_frequency_) && state_ == CONTROLLING)
         ROS_WARN("Control loop missed its desired rate of %.4fHz... the loop actually took %.4f seconds", controller_frequency_, r.cycleTime().toSec());
-    }
+    }// n.ok()
 
+    // 以下是节点被杀死了
     //wake up the planner thread so that it can exit cleanly
     lock.lock();
     runPlanner_ = true;
@@ -1180,6 +1186,7 @@ namespace move_base {
     // get robot pose on the given costmap frame
     try
     {
+      //这是一个模板函数 tf2::doTransform(in, out, lookupTransform(target_frame, tf2::getFrameId(in), tf2::getTimestamp(in), timeout))
       tf_.transform(robot_pose, global_pose, costmap->getGlobalFrameID());
     }
     catch (tf2::LookupException& ex)

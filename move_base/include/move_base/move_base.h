@@ -64,16 +64,16 @@ namespace move_base {
   typedef actionlib::SimpleActionServer<move_base_msgs::MoveBaseAction> MoveBaseActionServer;
 
   enum MoveBaseState {
-    PLANNING,
-    CONTROLLING,
-    CLEARING
+    PLANNING,     // 全局路径规划
+    CONTROLLING,  // 局部路径规划
+    CLEARING      // 清图
   };
 
   enum RecoveryTrigger
   {
-    PLANNING_R,
-    CONTROLLING_R,
-    OSCILLATION_R
+    PLANNING_R,     // 全局路径规划触发了清图 
+    CONTROLLING_R,  // 局部路径规划触发了清图
+    OSCILLATION_R   // 局部路径规划中由于振荡触发了清图
   };
 
   /**
@@ -221,16 +221,16 @@ namespace move_base {
       pluginlib::ClassLoader<nav_core::RecoveryBehavior> recovery_loader_;
 
       //set up plan triple buffer, 路径规划结果缓存
-      std::vector<geometry_msgs::PoseStamped>* planner_plan_; // 全局规划器规划的路径
-      std::vector<geometry_msgs::PoseStamped>* latest_plan_;  // 全局规划器最新规划出来的全局路径
-      std::vector<geometry_msgs::PoseStamped>* controller_plan_;
+      std::vector<geometry_msgs::PoseStamped>* planner_plan_; // 先保存全局规划器最新规划出来的的路径，然后赋值给latest_plan_
+      std::vector<geometry_msgs::PoseStamped>* latest_plan_;  // 保存全局规划器最新规划出来的全局路径
+      std::vector<geometry_msgs::PoseStamped>* controller_plan_; // 由latest_plan_赋值而得，局部规划器执行的路径(全局)
 
       //set up the planner's thread
       bool runPlanner_; // 是否运行全局规划线程
       boost::recursive_mutex planner_mutex_;
       boost::condition_variable_any planner_cond_; // 全局规划线程
       geometry_msgs::PoseStamped planner_goal_; // 目标地点
-      boost::thread* planner_thread_; // 路径规划线程
+      boost::thread* planner_thread_; // 全局路径规划线程
 
 
       boost::recursive_mutex configuration_mutex_;
