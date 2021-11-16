@@ -212,7 +212,7 @@ namespace move_base {
       MoveBaseState state_;
       RecoveryTrigger recovery_trigger_;
 
-      ros::Time last_valid_plan_;         // 上一次有效规划的时间
+      ros::Time last_valid_plan_;         // 上一次有效全局路径规划的时间
       ros::Time last_valid_control_;      // 上一次有效控制的时间
       ros::Time last_oscillation_reset_;  // 上一次振荡重置的时间
       geometry_msgs::PoseStamped oscillation_pose_; // 振荡位姿

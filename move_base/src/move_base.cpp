@@ -484,7 +484,7 @@ namespace move_base {
       return false;
     }
 
-    //get the starting pose of the robot，获取机器人初始位姿
+    //get the starting pose of the robot，先获取机器人当前的全局位姿
     geometry_msgs::PoseStamped global_pose;
     if(!getRobotPose(global_pose, planner_costmap_ros_)) {
       ROS_WARN("Unable to get starting pose of robot, unable to create global plan");
@@ -585,15 +585,15 @@ namespace move_base {
       ros::Time start_time = ros::Time::now();
 
       //time to plan! get a copy of the goal and unlock the mutex
-      geometry_msgs::PoseStamped temp_goal = planner_goal_;
+      geometry_msgs::PoseStamped temp_goal = planner_goal_; // planner_goal_ 导航目标点(全局坐标)
       lock.unlock();
       ROS_DEBUG_NAMED("move_base_plan_thread","Planning...");
 
       //run planner
       planner_plan_->clear();
-      bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_);
+      bool gotPlan = n.ok() && makePlan(temp_goal, *planner_plan_); // 规划全局路径
 
-      if(gotPlan){ // 已经规划出来了一条全局路径
+      if(gotPlan){ // 现在已经成功规划出来了一条全局路径
         ROS_DEBUG_NAMED("move_base_plan_thread","Got Plan with %zu points!", planner_plan_->size());
         //pointer swap the plans under mutex (the controller will pull from latest_plan_)
         std::vector<geometry_msgs::PoseStamped>* temp_plan = planner_plan_;
@@ -609,12 +609,13 @@ namespace move_base {
 
         //make sure we only start the controller if we still haven't reached the goal
         if(runPlanner_)
-          state_ = CONTROLLING;
+          state_ = CONTROLLING; // 切换move_base状态至局部规划控制
         if(planner_frequency_ <= 0) // 小于等于0 ，则只规划一次，然后继续阻塞等待唤醒信号
           runPlanner_ = false;
         lock.unlock();
       }
       //if we didn't get a plan and we are in the planning state (the robot isn't moving)
+      // 全局路径规划失败 ，一般会重新规划全局路径
       else if(state_==PLANNING){
         ROS_DEBUG_NAMED("move_base_plan_thread","No Plan...");
         ros::Time attempt_end = last_valid_plan_ + ros::Duration(planner_patience_);
@@ -624,9 +625,10 @@ namespace move_base {
         //is negative (the default), it is just ignored and we have the same behavior as ever
         lock.lock();
         planning_retries_++;
-        if(runPlanner_ &&
+        if(runPlanner_ && // 达到了设定的阈值条件就会清图
            (ros::Time::now() > attempt_end || planning_retries_ > uint32_t(max_planning_retries_))){
           //we'll move into our obstacle clearing mode
+          // planning_retries_ = 0;应该加上这句
           state_ = CLEARING;
           runPlanner_ = false;  // proper solution for issue #523
           publishZeroVelocity();
@@ -667,11 +669,11 @@ namespace move_base {
     boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
     planner_goal_ = goal;
     runPlanner_ = true;
-    planner_cond_.notify_one(); // 唤醒全局规划线程，此时该线程会阻塞，直到全局规划完毕再进行下一步
+    planner_cond_.notify_one(); // 唤醒全局规划线程，此时该线程会阻塞，直到全局规划完毕再继续下面的操作
     lock.unlock();
 
     current_goal_pub_.publish(goal); // 发布当前目标点
-    std::vector<geometry_msgs::PoseStamped> global_plan;
+    std::vector<geometry_msgs::PoseStamped> global_plan; // not used
 
     ros::Rate r(controller_frequency_);
     if(shutdown_costmaps_){
@@ -774,8 +776,8 @@ namespace move_base {
       //for timing that gives real time even in simulation
       ros::WallTime start = ros::WallTime::now();
 
-      //the real work on pursuing a goal is done here,开始执行真正的导航控制业务executeCycle
-      bool done = executeCycle(goal, global_plan);
+      //the real work on pursuing a goal is done here,开始执行真正的导航控制业务executeCycle，循环调用
+      bool done = executeCycle(goal, global_plan); // global_plan没用上
 
       //if we're done, then we'll return from execute
       if(done)
@@ -809,17 +811,18 @@ namespace move_base {
     return hypot(p1.pose.position.x - p2.pose.position.x, p1.pose.position.y - p2.pose.position.y);
   }
 
+  // 该函数会被循环调用，直至到达目标点或者中断
   bool MoveBase::executeCycle(geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& global_plan){
     boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
     //we need to be able to publish velocity commands
     geometry_msgs::Twist cmd_vel;
 
-    //update feedback to correspond to our curent position
+    //update feedback to correspond to our curent position，获取机器人当前全局位姿
     geometry_msgs::PoseStamped global_pose;
     getRobotPose(global_pose, planner_costmap_ros_);
     const geometry_msgs::PoseStamped& current_position = global_pose;
 
-    //push the feedback out
+    //push the feedback out，实时反馈机器人当前位姿
     move_base_msgs::MoveBaseFeedback feedback;
     feedback.base_position = current_position;
     as_->publishFeedback(feedback);
@@ -843,7 +846,7 @@ namespace move_base {
     }
 
     //if we have a new plan then grab it and give it to the controller
-    if(new_global_plan_){
+    if(new_global_plan_){ // 全局规划线程新规划出来了一条全局路径
       //make sure to set the new plan flag to false
       new_global_plan_ = false;
 
@@ -853,13 +856,14 @@ namespace move_base {
       std::vector<geometry_msgs::PoseStamped>* temp_plan = controller_plan_;
 
       boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
-      controller_plan_ = latest_plan_; // 全局规划器最新规划出来的全局路径
-      latest_plan_ = temp_plan;
+      controller_plan_ = latest_plan_; // latest_plan_是全局规划器最新规划出来的全局路径
+      latest_plan_ = temp_plan; // 在全局规划线程中会得到重新赋值
       lock.unlock();
       ROS_DEBUG_NAMED("move_base","pointers swapped!");
 
       // 设置局部规划器要跟随的全局路径
       if(!tc_->setPlan(*controller_plan_)){
+        // 未成功将跟随的全局路径设置成功，则中断action
         //ABORT and SHUTDOWN COSTMAPS
         ROS_ERROR("Failed to pass global plan to the controller, aborting.");
         resetState();
@@ -1186,7 +1190,13 @@ namespace move_base {
     // get robot pose on the given costmap frame
     try
     {
-      //这是一个模板函数 tf2::doTransform(in, out, lookupTransform(target_frame, tf2::getFrameId(in), tf2::getTimestamp(in), timeout))
+      /* template <class T>  // 这是一个模板函数 
+        T&  transform (const T& in, T& out, const std::string& target_frame, ros::Duration timeout=ros::Duration(0.0) ) const
+        {
+          tf2::doTransform(in, out, lookupTransform(target_frame, tf2::getFrameId(in), tf2::getTimestamp(in), timeout));
+          return out;
+        }
+      */
       tf_.transform(robot_pose, global_pose, costmap->getGlobalFrameID());
     }
     catch (tf2::LookupException& ex)
