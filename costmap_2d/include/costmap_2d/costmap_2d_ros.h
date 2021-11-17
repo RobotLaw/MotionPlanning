@@ -228,8 +228,8 @@ public:
   void setUnpaddedRobotFootprintPolygon(const geometry_msgs::Polygon& footprint);
 
 protected:
-  LayeredCostmap* layered_costmap_; // 图层管理器
-  std::string name_; // costmap对象名称
+  LayeredCostmap* layered_costmap_; // 图层管理器，记录了代价地图的各个图层对象，并提供融合各个图层数据的接口
+  std::string name_; // costmap对象名称,是全局costmap还是局部costmap
   tf2_ros::Buffer& tf_;  ///< @brief Used for transforming point clouds
   std::string global_frame_;  ///< @brief The global frame for the costmap
   std::string robot_base_frame_;  ///< @brief The frame_id of the robot base

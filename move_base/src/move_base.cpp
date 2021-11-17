@@ -579,6 +579,8 @@ namespace move_base {
       while(wait_for_wake || !runPlanner_){
         //if we should not be running the planner then suspend this thread
         ROS_DEBUG_NAMED("move_base_plan_thread","Planner thread is suspending");
+        // 进入planner_cond_的wait接口的时候将释放锁，此时planner_thread_将进入一种等待的状态。
+        // 当我们在其它线程中执行了语句planner_cond_.notify_one()时，将把planner_thread_从等待中唤醒，并从wait接口中返回，与此同时将再次对信号量加锁。
         planner_cond_.wait(lock); // 阻塞，等待move_base调用全局规划器
         wait_for_wake = false;
       }
@@ -646,6 +648,7 @@ namespace move_base {
         ros::Duration sleep_time = (start_time + ros::Duration(1.0/planner_frequency_)) - ros::Time::now();
         if (sleep_time > ros::Duration(0.0)){
           wait_for_wake = true;
+          //定时器，多久没有规划路径，就通知一次规划路径
           timer = n.createTimer(sleep_time, &MoveBase::wakePlanner, this);
         }
       }
@@ -698,7 +701,7 @@ namespace move_base {
         c_freq_change_ = false;
       }
 
-      // 查看Action服务器的状态机。如果触发了抢占，需要相应作出处理，并更新as_的状态机。如果是因为接收到新的目标而触发了抢占行为，
+      // 查看Action服务器的状态机。如果触发了抢占(可能是发出新的goal，也可能是取消了)，需要相应作出处理，并更新as_的状态机。如果是因为接收到新的目标而触发了抢占行为，
       // 我们将接受新目标并开始新的规划和控制。对于其它抢占行为，我们认为取消了Action任务，将挂起退出
       if(as_->isPreemptRequested()){ // 检查是否发生中断，这是因为有新的目标点发了过来导致中断了，则需要重新进行全局规划
         if(as_->isNewGoalAvailable()){ // 新的goal是否可用
@@ -790,6 +793,7 @@ namespace move_base {
 
       r.sleep();
       //make sure to sleep for the remainder of our cycle time
+      // 这个是一般的警告信息，规划的时间超时
       if(r.cycleTime() > ros::Duration(1 / controller_frequency_) && state_ == CONTROLLING)
         ROS_WARN("Control loop missed its desired rate of %.4fHz... the loop actually took %.4f seconds", controller_frequency_, r.cycleTime().toSec());
     }// n.ok()
@@ -903,7 +907,7 @@ namespace move_base {
           ROS_DEBUG_NAMED("move_base","Goal reached!");
           resetState();
 
-          //disable the planner thread
+          //disable the planner thread，停止全局规划
           boost::unique_lock<boost::recursive_mutex> lock(planner_mutex_);
           runPlanner_ = false;
           lock.unlock();
@@ -913,6 +917,8 @@ namespace move_base {
         }
 
         //check for an oscillation condition
+        // 这个似乎是小车不知道为什么来回走动，在一定的时间没有移动足够的距离
+        // 有些时候，机器人会长时间在一个地方不怎么移动，此时很可能出现了一些异常的状况
         if(oscillation_timeout_ > 0.0 &&
             last_oscillation_reset_ + ros::Duration(oscillation_timeout_) < ros::Time::now())
         {
@@ -924,16 +930,19 @@ namespace move_base {
         { // 加锁
          boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(controller_costmap_ros_->getCostmap()->getMutex()));
 
-        if(tc_->computeVelocityCommands(cmd_vel)){
+        // 一般情况下，我们都是通过局部规划器获得对机器人的速度控制指令，发布控制消息。如果局部规划器没有完成控制指令的计算，
+        // 将回到PLANNING状态重新规划路径。如果多次尝试仍然不能完成， 就进入CLEARING状态。
+        // 状态CLEARING的存在完全是为了消除一些异常，与路径规划和导航控制没有关系
+        if(tc_->computeVelocityCommands(cmd_vel)){ // 局部规划器成功规划出了控制速度
           ROS_DEBUG_NAMED( "move_base", "Got a valid command from the local planner: %.3lf, %.3lf, %.3lf",
                            cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.angular.z );
-          last_valid_control_ = ros::Time::now();
+          last_valid_control_ = ros::Time::now(); // 实时更新
           //make sure that we send the velocity command to the base
           vel_pub_.publish(cmd_vel);
           if(recovery_trigger_ == CONTROLLING_R)
             recovery_index_ = 0;
         }
-        else {
+        else { // 局部规划器未能规划出控制速度
           ROS_DEBUG_NAMED("move_base", "The local planner could not find a valid plan.");
           ros::Time attempt_end = last_valid_control_ + ros::Duration(controller_patience_);
 

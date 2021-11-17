@@ -66,7 +66,7 @@ namespace move_base {
   enum MoveBaseState {
     PLANNING,     // 全局路径规划
     CONTROLLING,  // 局部路径规划
-    CLEARING      // 清图
+    CLEARING      // 恢复状态，清图
   };
 
   enum RecoveryTrigger
@@ -201,7 +201,8 @@ namespace move_base {
       double conservative_reset_dist_, clearing_radius_;
       ros::Publisher current_goal_pub_, vel_pub_, action_goal_pub_, recovery_status_pub_;
       ros::Subscriber goal_sub_;
-      ros::ServiceServer make_plan_srv_, clear_costmaps_srv_;
+      ros::ServiceServer make_plan_srv_; // 只会提供plan该怎么走的位置信息，不会使机器人移动
+      ros::ServiceServer clear_costmaps_srv_; // 告诉move_base清楚costmap中的障碍物信息，可能导致撞到障碍物
       bool shutdown_costmaps_; // 当move_base不活动时，是否关闭代价地图的加载
       bool clearing_rotation_allowed_; // 是否允许旋转恢复行为
       bool recovery_behavior_enabled_; // 是否使用恢复模块
