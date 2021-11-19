@@ -118,7 +118,7 @@ protected:
    * tf_, name_, and layered_costmap_ will all be set already when this is called. */
   virtual void onInitialize() {}
 
-  LayeredCostmap* layered_costmap_;
+  LayeredCostmap* layered_costmap_; // 通过该指针获取到对主图层master map的操作。没有这个指针，所有基于Layer继承下去的地图的类，都无法操作master map
   bool current_;
   bool enabled_;  ///< Currently this var is managed by subclasses. TODO: make this managed by this class and/or container class.
   std::string name_;

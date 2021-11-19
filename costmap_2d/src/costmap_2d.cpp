@@ -65,7 +65,7 @@ void Costmap2D::deleteMaps()
 void Costmap2D::initMaps(unsigned int size_x, unsigned int size_y)
 {
   boost::unique_lock<mutex_t> lock(*access_);
-  delete[] costmap_;
+  delete[] costmap_;  // 先删除，再重新赋值
   costmap_ = new unsigned char[size_x * size_y];
 }
 
@@ -180,7 +180,7 @@ Costmap2D::~Costmap2D()
 
 unsigned int Costmap2D::cellDistance(double world_dist)
 {
-  double cells_dist = max(0.0, ceil(world_dist / resolution_));
+  double cells_dist = max(0.0, ceil(world_dist / resolution_)); // 向上取整
   return (unsigned int)cells_dist;
 }
 

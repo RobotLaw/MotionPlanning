@@ -49,8 +49,9 @@ namespace costmap_2d
 class Layer;
 
 /**
- * @class LayeredCostmap
+ * @class LayeredCostmap "包工头"
  * @brief Instantiates different layer plugins and aggregates them into one score
+ * 图层管理类，管理各个图层插件，并将信息汇总到主图层master costmap上， 并提供给Costmap2DROS调用接口。
  */
 class LayeredCostmap
 {
@@ -66,7 +67,7 @@ public:
   ~LayeredCostmap();
 
   /**
-   * @brief  Update the underlying costmap with new data.
+   * @brief  Update the underlying costmap with new data.用新数据更新底层costmap
    * If you want to update the map outside of the update loop that runs, you can call this.
    */
   void updateMap(double robot_x, double robot_y, double robot_yaw);
@@ -155,8 +156,8 @@ public:
   double getInscribedRadius() { return inscribed_radius_; }
 
 private:
-  Costmap2D costmap_;
-  std::string global_frame_;
+  Costmap2D costmap_;  // 主图层 master costmap，各个图层的数据叠加之后的代价地图对象
+  std::string global_frame_;  // 全局坐标系
 
   bool rolling_window_;  /// < @brief Whether or not the costmap should roll with the robot
 
@@ -164,10 +165,11 @@ private:
   double minx_, miny_, maxx_, maxy_;
   unsigned int bx0_, bxn_, by0_, byn_;
 
-  std::vector<boost::shared_ptr<Layer> > plugins_;
+  std::vector<boost::shared_ptr<Layer> > plugins_; // 图层插件,记录了所有的图层
 
   bool initialized_;
   bool size_locked_;
+  // inscribed_radius_, circumscribed_radius_ 是计算得到的机器人底座的内切圆和外接圆半径
   double circumscribed_radius_, inscribed_radius_;
   std::vector<geometry_msgs::Point> footprint_;
 };
