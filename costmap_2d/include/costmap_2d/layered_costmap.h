@@ -90,7 +90,7 @@ public:
 
   bool isCurrent();
 
-  Costmap2D* getCostmap()
+  Costmap2D* getCostmap() // 返回主图层
   {
     return &costmap_;
   }
@@ -159,11 +159,11 @@ private:
   Costmap2D costmap_;  // 主图层 master costmap，各个图层的数据叠加之后的代价地图对象
   std::string global_frame_;  // 全局坐标系
 
-  bool rolling_window_;  /// < @brief Whether or not the costmap should roll with the robot
+  bool rolling_window_;  /// < @brief Whether or not the costmap should roll with the robot，局部costmap设置为true
 
   bool current_;
   double minx_, miny_, maxx_, maxy_;
-  unsigned int bx0_, bxn_, by0_, byn_;
+  unsigned int bx0_, bxn_, by0_, byn_; // 地图边界
 
   std::vector<boost::shared_ptr<Layer> > plugins_; // 图层插件,记录了所有的图层
 

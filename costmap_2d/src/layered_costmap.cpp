@@ -66,7 +66,7 @@ LayeredCostmap::LayeredCostmap(std::string global_frame, bool rolling_window, bo
     inscribed_radius_(0.1)
 {
   if (track_unknown)
-    costmap_.setDefaultValue(255); // costmap_2d::NO_INFORMATION
+    costmap_.setDefaultValue(255); // costmap_2d::NO_INFORMATION，无效值
   else
     costmap_.setDefaultValue(0); // costmap_2d::FREE_SPACE
 }
@@ -82,13 +82,14 @@ LayeredCostmap::~LayeredCostmap()
 void LayeredCostmap::resizeMap(unsigned int size_x, unsigned int size_y, double resolution, double origin_x,
                                double origin_y, bool size_locked)
 {
+  // 全局代价地图时，master map的尺寸始终和静态地图的尺寸一样。在局部代价地图动态窗口时，master map的尺寸由外部配置文件设定 
   boost::unique_lock<Costmap2D::mutex_t> lock(*(costmap_.getMutex()));
   size_locked_ = size_locked;
   costmap_.resizeMap(size_x, size_y, resolution, origin_x, origin_y);
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
       ++plugin)
   {
-    (*plugin)->matchSize();
+    (*plugin)->matchSize(); // 调整各个图层的地图尺寸，实际效果就是将plugin所指向的每一层地图的大小都设置为和LayeredCostmap::costmap_一样的空间大小
   }
 }
 
@@ -102,6 +103,7 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   // if we're using a rolling buffer costmap... we need to update the origin using the robot's position
   if (rolling_window_) // 适用于局部costmap的情况
   {
+    // 简而言之，就是始终以当前机器人位置为局部costmap最中心，机器人移动多少，新的原点就相对于上一次的地图原点移动多少
     double new_origin_x = robot_x - costmap_.getSizeInMetersX() / 2;
     double new_origin_y = robot_y - costmap_.getSizeInMetersY() / 2; // 这幅地图是以机器人为中心
     costmap_.updateOrigin(new_origin_x, new_origin_y); //变换地图的起始点坐标，就表示机器人移动了
@@ -179,11 +181,12 @@ bool LayeredCostmap::isCurrent()
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
       ++plugin)
   {
-    current_ = current_ && (*plugin)->isCurrent();
+    current_ = current_ && (*plugin)->isCurrent(); // layer是否是最新的数据
   }
   return current_;
 }
 
+// 设置新的足迹模型
 void LayeredCostmap::setFootprint(const std::vector<geometry_msgs::Point>& footprint_spec)
 {
   footprint_ = footprint_spec;
@@ -193,7 +196,7 @@ void LayeredCostmap::setFootprint(const std::vector<geometry_msgs::Point>& footp
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
       ++plugin)
   {
-    (*plugin)->onFootprintChanged();
+    (*plugin)->onFootprintChanged(); // 主要是针对膨胀层
   }
 }
 

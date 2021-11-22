@@ -173,7 +173,7 @@ public:
     }
 
   /** @brief Return a pointer to the "master" costmap which receives updates from all the layers.
-   *
+   * 获取主图层
    * Same as calling getLayeredCostmap()->getCostmap(). */
   Costmap2D* getCostmap()
     {
@@ -304,7 +304,7 @@ private:
   boost::recursive_mutex configuration_mutex_;
 
   ros::Subscriber footprint_sub_;
-  ros::Publisher footprint_pub_; // 用于发布机器人足迹
+  ros::Publisher footprint_pub_; // 用于发布机器人足迹(轮廓)
   std::vector<geometry_msgs::Point> unpadded_footprint_;  // 未填充的足迹
   std::vector<geometry_msgs::Point> padded_footprint_;    // 填充后的足迹
   float footprint_padding_; // 足迹填充大小
