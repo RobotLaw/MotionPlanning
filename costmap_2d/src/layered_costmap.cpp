@@ -143,7 +143,7 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
     }
   }
 
-  int x0, xn, y0, yn;
+  int x0, xn, y0, yn; // 边界
   costmap_.worldToMapEnforceBounds(minx_, miny_, x0, y0);
   costmap_.worldToMapEnforceBounds(maxx_, maxy_, xn, yn);
 
@@ -158,7 +158,7 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
     return;
 
   // 重置地图并重新计算各个栅格的代价，并标识地图更新状态
-  costmap_.resetMap(x0, y0, xn, yn); // 用缺省值重置全局地图更新边界范围内的地图信息
+  costmap_.resetMap(x0, y0, xn, yn); // 用缺省值重置代价地图更新边界范围内的地图信息(主图层)
   // 地图信息的更新并不是每次都更新整幅地图，而是根据计算出的更新边界，然后用各层去更新该边界内的区域
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
        ++plugin)

@@ -161,13 +161,13 @@ private:
 
   bool rolling_window_;  /// < @brief Whether or not the costmap should roll with the robot，局部costmap设置为true
 
-  bool current_;
+  bool current_; // 判断地图是否有效
   double minx_, miny_, maxx_, maxy_;
   unsigned int bx0_, bxn_, by0_, byn_; // 地图边界
 
   std::vector<boost::shared_ptr<Layer> > plugins_; // 图层插件,记录了所有的图层
 
-  bool initialized_;
+  bool initialized_;  // 其实是成功更新地图的标志
   bool size_locked_;
   // inscribed_radius_, circumscribed_radius_ 是计算得到的机器人底座的内切圆和外接圆半径
   double circumscribed_radius_, inscribed_radius_;
